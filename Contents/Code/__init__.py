@@ -59,11 +59,10 @@ def getsession():
 	except urllib2.HTTPError, e:
 		if e.code == 401 or e.code == 403:
 			return "Invalid username or password", {}
-
-    # Otherwise, we've probably received a 409 Conflict which contains the session ID
-    # Log.Add("HTTP error %d from Transmission\n%s" % (e.code, e.read()))
-    # Log.Add("Session ID is:%s" % (e.hdrs['X-Transmission-Session-Id']))
+		# Otherwise, we've probably received a 409 Conflict which contains the session ID
 		return e.hdrs['X-Transmission-Session-Id']
+	except:
+		return "Transmission not running", {}
 	
 
 def remote(method, arguments = {}, headers = {}): 
@@ -94,8 +93,8 @@ def remote(method, arguments = {}, headers = {}):
 
 		Log.Add("HTTP error %d from Transmission\n%s" % (e.code, e.read()))
 		return "Error reading response from Transmission", {}
-	except urllib2.URLError, e:
-		return e.reason[1], {}
+	except:
+		return "Transmission not running", {}
 
 	# Log.Add("Read Result: %s" % body)
 	result = JSON.DictFromString(body)
@@ -146,7 +145,10 @@ def HandleRequest(path, count):
 		)
 
 		if error != None:
-			dir.SetMessage("Torrents", error)
+			dir.AppendItem(DirectoryItem("setup",	"Installation and Setup",
+				summary="Transmission is not running.\n\nPlease ensure you have downloaded the application from transmissionbt.com and enabled remote access.\n\n",
+				thumb=Plugin.ExposedResourcePath("icon-default.png")))
+      # dir.SetMessage("Torrents", error)
 		elif result["torrents"] != None:
 			for torrent in result["torrents"]:
 				summary = ""
@@ -549,6 +551,7 @@ def HandleRequest(path, count):
 			# /settings
 
 			dir = MediaContainer('art-default.jpg', "Settings", "Settings")
+			dir.nocache = 1
 			dir.AppendItem(SearchDirectoryItem("plex/hostname",
 				"Host or IP: %s" % getPref("hostname", True), "Hostname",
 				summary="Enter the hostname and port of the computer running Transmission.  The remote access option must be enabled."))  
@@ -608,6 +611,8 @@ def HandleRequest(path, count):
 
 			return torrenticon(urllib.unquote(path[1]), urllib.unquote(path[2]), int(path[3]))
 
+	elif path[0] == "setup":
+		return MessageContainer("Error", "Please ensure Transmission is installed and running.").ToXML()
 	elif count == 1:
 		return MessageContainer("Error", "Invalid Request").ToXML()
 
