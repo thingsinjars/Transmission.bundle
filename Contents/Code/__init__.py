@@ -47,15 +47,15 @@ def ValidatePrefs():
     h = Prefs.Get('hostname')
     ## do some checks and return a
     ## message container
-    if( u and p and h):
+    if( h ):
         return MessageContainer(
             "Success",
-            "Info provided is ok"
+            "Details have been saved"
         )
     else:
         return MessageContainer(
             "Error",
-            "You need to provide url, username, and password"
+            "You need to provide a hostname"
         )
 
 ### Transmission plugin proper starts here
