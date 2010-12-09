@@ -1,13 +1,11 @@
 from PMS import *
-from PMS.Objects import *
-from PMS.Shortcuts import *
-from texttime		import prettyduration
-from textbytes		import prettysize
-import urllib,urllib2,base64 #temporarily included until HTTP module allows header access
+from texttime import prettyduration
+from textbytes import prettysize
+import urllib, urllib2, base64 #temporarily included until HTTP module allows header access
 
 ####################################################################################################
 
-PLUGIN_PREFIX = "/video/transmission"
+PLUGIN_PREFIX = "/applications/transmission"
 PLUGIN_TITLE = "Transmission"
 
 NAME = L('Title')
@@ -18,19 +16,20 @@ SETTINGS      = 'settings-hi.png'
 PAUSE         = 'pause-hi.png'
 RESUME        = 'resume-hi.png'
 SEARCH        = 'search-hi.png'
-TV        		= 'tv-hi.png'
+TV            = 'tv-hi.png'
 
 # Plugin-specific constants
 TRANSMISSION_WAITING      = 1
-TRANSMISSION_CHECKING      = 2
+TRANSMISSION_CHECKING     = 2
 TRANSMISSION_DOWNLOADING  = 4
 TRANSMISSION_SEEDING      = 8
-TRANSMISSION_PAUSED        = 16
+TRANSMISSION_PAUSED       = 16
 
 ####################################################################################################
 
 def Start():
     Plugin.AddPrefixHandler(PLUGIN_PREFIX, MainMenu, PLUGIN_TITLE, ICON, ART)
+    Plugin.AddViewGroup('List', viewMode='List', mediaType='items')
 
     MediaContainer.art = R(ART)
     MediaContainer.title1 = NAME
@@ -38,13 +37,19 @@ def Start():
 
 def CreatePrefs():
     Prefs.Add(id='hostname', type='text', default='127.0.0.1:9091', label='Hostname')
-    Prefs.Add(id='username', type='text', default='admin', label='Username')
-    Prefs.Add(id='password', type='text', default='', label='Password', option='hidden')
+    Prefs.Add(id='username', type='text', default='', label='Username (enter a . for empty username)')
+    Prefs.Add(id='password', type='text', default='', label='Password (enter a . for empty password)', option='hidden')
 
 def ValidatePrefs():
     u = Prefs.Get('username')
     p = Prefs.Get('password')
     h = Prefs.Get('hostname')
+
+    if u == '.':
+        Prefs.Set('username', '')
+    if p == '.':
+        Prefs.Set('password', '')
+
     ## do some checks and return a
     ## message container
     if( h ):
@@ -69,20 +74,21 @@ def GetSession():
   url = "http://%s/transmission/rpc/" % h
   request = { "method" : "session-get" }
   headers = {}
-  if( u and p and h):
+  if( u and p ):
     headers["Authorization"] = "Basic %s" % (base64.encodestring("%s:%s" % (u, p))[:-1])
-    try:
-      body = urllib2.urlopen(urllib2.Request(url, JSON.StringFromObject(request), headers)).read()
-    except urllib2.HTTPError, e:
-      if e.code == 401 or e.code == 403:
-        return L('ErrorInvalidUsername'), {}
-      # Otherwise, we've probably received a 409 Conflict which contains the session ID
-      # Once the HTTP module allows access to returned headers, use these to set global authorization:
-      # HTTP.SetPassword(h,u,p)
-      # HTTP.SetHeader('X-Transmission-Session-Id', e.hdrs['X-Transmission-Session-Id'])
-      return e.hdrs['X-Transmission-Session-Id']
-    except:
-      return L('ErrorNotRunning'), {}
+
+  try:
+    body = urllib2.urlopen(urllib2.Request(url, JSON.StringFromObject(request), headers)).read()
+  except urllib2.HTTPError, e:
+    if e.code == 401 or e.code == 403:
+      return L('ErrorInvalidUsername'), {}
+    # Otherwise, we've probably received a 409 Conflict which contains the session ID
+    # Once the HTTP module allows access to returned headers, use these to set global authorization:
+    # HTTP.SetPassword(h,u,p)
+    # HTTP.SetHeader('X-Transmission-Session-Id', e.hdrs['X-Transmission-Session-Id'])
+    return e.hdrs['X-Transmission-Session-Id']
+  except:
+    return L('ErrorNotRunning'), {}
 
 # Remote Transmission Call -
 # Use the RPC methods of Transmission to perform all out actions
