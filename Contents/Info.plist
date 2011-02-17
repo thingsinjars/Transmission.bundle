@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
@@ -17,12 +17,12 @@
 	<key>CFBundleVersion</key>
 	<string>1.0</string>
 	<key>PlexClientPlatforms</key>
-	<string>MacOSX,iOS</string>
+	<string>MacOSX,iOS,Android</string>
+	<key>PlexFrameworkVersion</key>
+	<string>1</string>
 	<key>PlexPluginDebug</key>
 	<string>1</string>
 	<key>PlexPluginMode</key>
 	<string>AlwaysOn</string>
-	<key>PlexFrameworkVersion</key>
-	<string>1</string>
 </dict>
 </plist>
