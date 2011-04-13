@@ -113,7 +113,7 @@ def RTC(method, arguments = {}, headers = {}):
       return L('ErrorInvalidUsername'), {}
     return "Error reading response from Transmission", {}
   except urllib2.URLError, e:
-    return e.reason[1], {}
+    return e.reason, {}
 
   result = JSON.ObjectFromString(body)
 
@@ -427,12 +427,12 @@ def TVEpisodeList(sender, name, url):
 
     dir = MediaContainer()
 
-    feed = HTML.ElementFromURL(url, errors='ignore').xpath("//item")
+    feed = RSS.FeedFromURL(url)['entries']
 
     for element in feed:
-        title = element.xpath("title")[0].text
-        link = element.xpath("link")[0].text
-        dir.Append(Function(DirectoryItem(AddTorrent,title,subtitle=None,summary=None,thumb=R(ICON),art=R(ART)),torrentUrl=link))
+        title = element["title"]
+        link = element["link"]
+        dir.Append(Function(DirectoryItem(AddTorrent, title=title,thumb=R(ICON), art=R(ART)), torrentUrl=link))
 
     return dir
 
