@@ -1,4 +1,3 @@
-from PMS import *
 from texttime import prettyduration
 from textbytes import prettysize
 import urllib, urllib2, base64 #temporarily included until HTTP module allows header access
