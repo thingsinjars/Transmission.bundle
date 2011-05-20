@@ -1,9 +1,6 @@
-from PMS import *
-from PMS.Objects import *
-from PMS.Shortcuts import *
-from texttime		import prettyduration
-from textbytes		import prettysize
-import urllib,urllib2,base64 #temporarily included until HTTP module allows header access
+from texttime import prettyduration
+from textbytes import prettysize
+import urllib, urllib2, base64 #temporarily included until HTTP module allows header access
 
 ####################################################################################################
 
@@ -18,33 +15,35 @@ SETTINGS      = 'settings-hi.png'
 PAUSE         = 'pause-hi.png'
 RESUME        = 'resume-hi.png'
 SEARCH        = 'search-hi.png'
-TV        		= 'tv-hi.png'
+TV            = 'tv-hi.png'
 
 # Plugin-specific constants
 TRANSMISSION_WAITING      = 1
-TRANSMISSION_CHECKING      = 2
+TRANSMISSION_CHECKING     = 2
 TRANSMISSION_DOWNLOADING  = 4
 TRANSMISSION_SEEDING      = 8
-TRANSMISSION_PAUSED        = 16
+TRANSMISSION_PAUSED       = 16
 
 ####################################################################################################
 
 def Start():
     Plugin.AddPrefixHandler(PLUGIN_PREFIX, MainMenu, PLUGIN_TITLE, ICON, ART)
+    Plugin.AddViewGroup('List', viewMode='List', mediaType='items')
 
     MediaContainer.art = R(ART)
     MediaContainer.title1 = NAME
     DirectoryItem.thumb = R(ICON)
 
-def CreatePrefs():
-    Prefs.Add(id='hostname', type='text', default='127.0.0.1:9091', label='Hostname')
-    Prefs.Add(id='username', type='text', default='admin', label='Username')
-    Prefs.Add(id='password', type='text', default='', label='Password', option='hidden')
+#def CreatePrefs():
+#    Prefs.Add(id='hostname', type='text', default='127.0.0.1:9091', label='Hostname')
+#    Prefs.Add(id='username', type='text', default='', label='Username (enter a . for empty username)')
+#    Prefs.Add(id='password', type='text', default='', label='Password (enter a . for empty password)', option='hidden')
 
 def ValidatePrefs():
-    u = Prefs.Get('username')
-    p = Prefs.Get('password')
-    h = Prefs.Get('hostname')
+    u = Prefs['username']
+    p = Prefs['password']
+    h = Prefs['hostname']
+
     ## do some checks and return a
     ## message container
     if( h ):
@@ -63,34 +62,35 @@ def ValidatePrefs():
 # We attempt to make a connection with just username & password so we get the 409 Conflict response
 # This will contain a header with our Session ID
 def GetSession():
-  h = Prefs.Get('hostname')
-  u = Prefs.Get('username')
-  p = Prefs.Get('password')
+  h = Prefs['hostname']
+  u = Prefs['username']
+  p = Prefs['password']
   url = "http://%s/transmission/rpc/" % h
   request = { "method" : "session-get" }
   headers = {}
-  if( u and p and h):
+  if( u and p ):
     headers["Authorization"] = "Basic %s" % (base64.encodestring("%s:%s" % (u, p))[:-1])
-    try:
-      body = urllib2.urlopen(urllib2.Request(url, JSON.StringFromObject(request), headers)).read()
-    except urllib2.HTTPError, e:
-      if e.code == 401 or e.code == 403:
-        return L('ErrorInvalidUsername'), {}
-      # Otherwise, we've probably received a 409 Conflict which contains the session ID
-      # Once the HTTP module allows access to returned headers, use these to set global authorization:
-      # HTTP.SetPassword(h,u,p)
-      # HTTP.SetHeader('X-Transmission-Session-Id', e.hdrs['X-Transmission-Session-Id'])
-      return e.hdrs['X-Transmission-Session-Id']
-    except:
-      return L('ErrorNotRunning'), {}
+
+  try:
+    body = urllib2.urlopen(urllib2.Request(url, JSON.StringFromObject(request), headers)).read()
+  except urllib2.HTTPError, e:
+    if e.code == 401 or e.code == 403:
+      return L('ErrorInvalidUsername'), {}
+    # Otherwise, we've probably received a 409 Conflict which contains the session ID
+    # Once the HTTP module allows access to returned headers, use these to set global authorization:
+    # HTTP.SetPassword(h,u,p)
+    # HTTP.SetHeader('X-Transmission-Session-Id', e.hdrs['X-Transmission-Session-Id'])
+    return e.hdrs['X-Transmission-Session-Id']
+  except:
+    return L('ErrorNotRunning'), {}
 
 # Remote Transmission Call -
 # Use the RPC methods of Transmission to perform all out actions
 def RTC(method, arguments = {}, headers = {}):
   # Once the HTTP module allows access to returned headers and the HTTP.SetPassword also auths JSON, refactor this
-  h = Prefs.Get('hostname')
-  u = Prefs.Get('username')
-  p = Prefs.Get('password')
+  h = Prefs['hostname']
+  u = Prefs['username']
+  p = Prefs['password']
   url = "http://%s/transmission/rpc/" % h
 
   session_id = GetSession()
@@ -113,7 +113,7 @@ def RTC(method, arguments = {}, headers = {}):
       return L('ErrorInvalidUsername'), {}
     return "Error reading response from Transmission", {}
   except urllib2.URLError, e:
-    return e.reason[1], {}
+    return e.reason, {}
 
   result = JSON.ObjectFromString(body)
 
@@ -296,24 +296,24 @@ def ViewFiles(sender, hash):
       continue
 
     for i in range(0, len(torrent["files"])):
-      file = torrent["files"][i]
+      f = torrent["files"][i]
 
-      Log("Name: %s" % (file["name"]), True)
+      Log("Name: %s" % (f["name"]), True)
 
       if torrent["wanted"][i] == 1:
-        if file["bytesCompleted"] == file["length"]:
+        if f["bytesCompleted"] == f["length"]:
           summary = "Complete"
         else:
           # Display progress "12.3 MB of 45.6 GB (0%)"
           summary = "%s of %s (%s%%)\n" % (
-              prettysize(file["bytesCompleted"]),
-              prettysize(file["length"]),
-              (file["bytesCompleted"]) / (file["length"] / 100)
+              prettysize(f["bytesCompleted"]),
+              prettysize(f["length"]),
+              (f["bytesCompleted"]) / (f["length"] / 100)
           )
       else:
         summary = "Not Downloading"
 
-      dir.Append(PopupDirectoryItem("%d" % i, file["name"], summary=summary))
+      dir.Append(PopupDirectoryItem("%d" % i, f["name"], summary=summary))
 
     return dir
 
@@ -374,7 +374,7 @@ def TVShowList(sender):
 
     dir = MediaContainer()
 
-    showsPage = XML.ElementFromURL('http://ezrss.it/shows/', isHTML=True, errors='ignore')
+    showsPage = HTML.ElementFromURL('http://ezrss.it/shows/', errors='ignore')
 
     #Assign to blocks, and remove the first block (A, B, C, etc...)
     blocks = showsPage.xpath('//div[@class="block"]')
@@ -393,7 +393,7 @@ def TVShowListFolders(sender):
 
     dir = MediaContainer()
 
-    showsPage = XML.ElementFromURL('http://ezrss.it/shows/', isHTML=True, errors='ignore')
+    showsPage = HTML.ElementFromURL('http://ezrss.it/shows/', errors='ignore')
 
     #Assign to blocks, and remove the first block (A, B, C, etc...)
     blocks = showsPage.xpath('//div[@class="block"]')
@@ -409,7 +409,7 @@ def TVShowListSubfolders(sender, letter):
 
     dir = MediaContainer()
 
-    showsPage = XML.ElementFromURL('http://ezrss.it/shows/', isHTML=True, errors='ignore')
+    showsPage = HTML.ElementFromURL('http://ezrss.it/shows/', errors='ignore')
 
     #Assign to blocks, and remove the first block (A, B, C, etc...)
     blocks = showsPage.xpath('//div[@class="block" and h2 = "%s"]' % letter)
@@ -427,12 +427,12 @@ def TVEpisodeList(sender, name, url):
 
     dir = MediaContainer()
 
-    feed = XML.ElementFromURL(url, isHTML=False, errors='ignore').xpath("//item")
+    feed = RSS.FeedFromURL(url)['entries']
 
     for element in feed:
-        title = element.xpath("title")[0].text
-        link = element.xpath("link")[0].text
-        dir.Append(Function(DirectoryItem(AddTorrent,title,subtitle=None,summary=None,thumb=R(ICON),art=R(ART)),torrentUrl=link))
+        title = element["title"]
+        link = element["link"]
+        dir.Append(Function(DirectoryItem(AddTorrent, title=title,thumb=R(ICON), art=R(ART)), torrentUrl=link))
 
     return dir
 
@@ -470,7 +470,7 @@ def SearchIsoHuntCategory(sender, query=None, category=99):
   if category != 99:
     url += "?iht=%d" % category
   Log(url, True)
-  feed = XML.ElementFromURL(url, isHTML=False, errors='ignore').xpath("//item")
+  feed = HTML.ElementFromURL(url, errors='ignore').xpath("//item")
   if feed == None:
     return MessageContainer("Error", "Search returned no results")
   if len(feed) == 0:
@@ -491,7 +491,7 @@ def SearchEZTV(sender, query=None):
   if query != None:
     url += "%s" % query
   Log(url, True)
-  feed = XML.ElementFromURL(url, isHTML=False, errors='ignore').xpath("//item")
+  feed = HTML.ElementFromURL(url, errors='ignore').xpath("//item")
   if feed == None:
     return MessageContainer("Error", "Search failed")
   if len(feed) == 0:

@@ -1,0 +1,22 @@
+[
+  {
+    "id":"hostname",
+    "type":"text",
+    "label":"Host Name",
+    "default":"127.0.0.1:9091"
+  },
+  {
+    "id":"username",
+    "type":"text",
+    "label":"Username",
+    "default":"" 
+  },
+  {
+    "id":"password",
+    "type":"text",
+    "option":"hidden",
+    "label":"Password",
+    "default":"",
+    "secure":"true"
+  }
+]
